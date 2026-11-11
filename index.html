@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benvenuto a Casa Manzoni 32</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; background: white; margin: 0 auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; color: #34495e; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        input[type="file"] { border: none; padding: 5px 0; }
+        .ospite-box { background: #f9f9f9; border-left: 4px solid #3498db; padding: 15px; margin-top: 15px; border-radius: 4px; }
+        .file-group { background: #f0f4f8; padding: 15px; margin-top: 20px; border-radius: 4px; border: 1px dashed #3498db; }
+        button { background-color: #2ecc71; color: white; border: none; padding: 12px 20px; font-size: 18px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 25px; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .privacy { font-size: 13px; color: #7f8c8d; margin-top: 20px; background: #f0f3f4; padding: 10px; border-radius: 4px; }
+        .checkbox-container { display: flex; align-items: flex-start; margin-top: 10px; }
+        .checkbox-container input { width: auto; margin-right: 10px; margin-top: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Casa Manzoni 32</h1>
+    <div class="subtitle">Modulo di Check-in Online con Documenti</div>
+
+    <form id="checkinForm">
+        <label for="camera">In quale camera soggiornerai? *</label>
+        <select id="camera" name="camera" required>
+            <option value="">Scegli la tua camera...</option>
+            <option value="Camera 1">Camera 1</option>
+            <option value="Camera 2">Camera 2</option>
+            <option value="Camera 3">Camera 3</option>
+            <option value="Camera 4">Camera 4</option>
+            <option value="Camera 5">Camera 5</option>
+            <option value="Camera 6">Camera 6</option>
+        </select>
+
+        <label for="checkin">Data di arrivo (check-in) *</label>
+        <input type="date" id="checkin" name="checkin" required>
+
+        <label for="checkout">Data di partenza (check-out) *</label>
+        <input type="date" id="checkout" name="checkout" required>
+
+        <label for="referente">Nome e Cognome del referente *</label>
+        <input type="text" id="referente" name="referente" placeholder="Es. Mario Rossi" required>
+
+        <label for="telefono">Telefono cellulare *</label>
+        <input type="tel" id="telefono" name="telefono" placeholder="Es. +39 333 1234567" required>
+
+        <label for="num_ospiti">Quante persone alloggeranno in totale? *</label>
+        <select id="num_ospiti" required onchange="generaCampiOspiti()">
+            <option value="1">1 Persona</option>
+            <option value="2">2 Persone</option>
+            <option value="3">3 Persone</option>
+            <option value="4">4 Persone</option>
+        </select>
+
+        <div id="containerOspiti"></div>
+
+        <!-- Sezione Caricamento File Visibile -->
+        <div class="file-group">
+            <h3>Foto Documento Referente</h3>
+            <label for="foto_fronte">Foto Fronte (JPG/PNG) *</label>
+            <input type="file" id="foto_fronte" accept="image/*" required>
+            
+            <label for="foto_retro">Foto Retro (JPG/PNG) *</label>
+            <input type="file" id="foto_retro" accept="image/*" required>
+        </div>
+
+        <input type="hidden" id="ospiti_dati" name="ospiti_dati">
+
+        <div class="privacy">
+            <strong>Informativa Privacy:</strong> I dati e le immagini raccolti sono trattati esclusivamente per gli obblighi di comunicazione alle autorità di pubblica sicurezza (Alloggiati Web).
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="privacy_check" required>
+            <label for="privacy_check" style="margin:0; font-size:14px; font-weight:normal;">Ho letto e acconsento al trattamento dei dati e dei documenti. *</label>
+        </div>
+
+        <button type="submit" id="btnInvia">Invia Check-in Online</button>
+    </form>
+</div>
+
+<script>
+    function generaCampiOspiti() {
+        const num = document.getElementById('num_ospiti').value;
+        const container = document.getElementById('containerOspiti');
+        container.innerHTML = '';
+
+        for (let i = 1; i <= num; i++) {
+            const div = document.createElement('div');
+            div.className = 'ospite-box';
+            div.innerHTML = `
+                <h3>Dati Ospite ${i}</h3>
+                <label>Nome e Cognome *</label>
+                <input type="text" class="nome_ospite" placeholder="Nome completo" required>
+                <label>Numero Documento *</label>
+                <input type="text" class="doc_ospite" placeholder="Es. CA00000AA" required>
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    // Esegui la prima generazione all'avvio
+    generaCampiOspiti();
+
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+
+    document.getElementById('checkinForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btnInvia');
+        btn.innerText = "Caricamento immagini e dati in corso...";
+        btn.disabled = true;
+
+        const nomi = document.querySelectorAll('.nome_ospite');
+        const documenti = document.querySelectorAll('.doc_ospite');
+        let ospitiTesto = "";
+        
+        nomi.forEach((el, index) => {
+            ospitiTesto += `[Ospite ${index+1}: ${el.value} - Doc: ${documenti[index].value}] `;
+        });
+        
+        document.getElementById('ospiti_dati').value = ospitiTesto;
+
+        const fileFronteInput = document.getElementById('foto_fronte');
+        const fileRetroInput = document.getElementById('foto_retro');
+        
+        const formData = new FormData(this);
+
+        if (fileFronteInput.files.length > 0) {
+            const fileFronte = fileFronteInput.files[0];
+            const base64Fronte = await toBase64(fileFronte);
+            formData.append('file_fronte', base64Fronte);
+            formData.append('file_fronte_name', fileFronte.name);
+        }
+        if (fileRetroInput.files.length > 0) {
+            const fileRetro = fileRetroInput.files[0];
+            const base64Retro = await toBase64(fileRetro);
+            formData.append('file_retro', base64Retro);
+            formData.append('file_retro_name', fileRetro.name);
+        }
+
+        const urlScript = 'https://google.com';
+
+        fetch(urlScript, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: formData
+        })
+        .then(() => {
+            alert('Grazie! Il tuo check-in e le foto dei documenti sono stati registrati correttamente.');
+            document.getElementById('checkinForm').reset();
+            generaCampiOspiti();
+        })
+        .catch(error => {
+            alert('Si è verificato un errore durante il caricamento dei file. Riprova.');
+            console.error(error);
+        })
+        .finally(() => {
+            btn.innerText = "Invia Check-in Online";
+            btn.disabled = false;
+        });
+    });
+</script>
+
+</body>
+</html>
