@@ -11,9 +11,7 @@
         .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
         label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; color: #34495e; }
         select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
-        input[type="file"] { border: none; padding: 5px 0; }
         .ospite-box { background: #f9f9f9; border-left: 4px solid #3498db; padding: 15px; margin-top: 15px; border-radius: 4px; }
-        .file-group { background: #f0f4f8; padding: 15px; margin-top: 20px; border-radius: 4px; border: 1px dashed #3498db; }
         button { background-color: #2ecc71; color: white; border: none; padding: 12px 20px; font-size: 18px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 25px; }
         button:disabled { background-color: #95a5a6; cursor: not-allowed; }
         .privacy { font-size: 13px; color: #7f8c8d; margin-top: 20px; background: #f0f3f4; padding: 10px; border-radius: 4px; }
@@ -25,7 +23,7 @@
 
 <div class="container">
     <h1>Casa Manzoni 32</h1>
-    <div class="subtitle">Modulo di Check-in Online con Documenti</div>
+    <div class="subtitle">Modulo di Check-in Online</div>
 
     <form id="checkinForm">
         <label for="camera">In quale camera soggiornerai? *</label>
@@ -61,22 +59,13 @@
 
         <div id="containerOspiti"></div>
 
-        <div class="file-group">
-            <h3>Foto Documento Referente</h3>
-            <label for="foto_fronte">Foto Fronte (JPG/PNG) *</label>
-            <input type="file" id="foto_fronte" accept="image/*" required>
-            
-            <label for="foto_retro">Foto Retro (JPG/PNG) *</label>
-            <input type="file" id="foto_retro" accept="image/*" required>
-        </div>
-
         <div class="privacy">
-            <strong>Informativa Privacy:</strong> I dati e le immagini raccolti sono trattati esclusivamente per gli obblighi di comunicazione alle autorità di pubblica sicurezza (Alloggiati Web).
+            <strong>Informativa Privacy:</strong> I dati raccolti sono trattati esclusivamente per gli obblighi di comunicazione alle autorità di pubblica sicurezza (Alloggiati Web).
         </div>
         
         <div class="checkbox-container">
             <input type="checkbox" id="privacy_check" required>
-            <label for="privacy_check" style="margin:0; font-size:14px; font-weight:normal;">Ho letto e acconsento al trattamento dei dati e dei documenti. *</label>
+            <label for="privacy_check" style="margin:0; font-size:14px; font-weight:normal;">Ho letto e acconsento al trattamento dei dati. *</label>
         </div>
 
         <button type="submit" id="btnInvia">Invia Check-in Online</button>
@@ -89,7 +78,6 @@
         const container = document.getElementById('containerOspiti');
         container.innerHTML = '';
 
-        // Partiamo da i=2 se la prima persona è il referente, oppure lasciamoli tutti se preferisci elencarli esplicitamente
         for (let i = 1; i <= num; i++) {
             const div = document.createElement('div');
             div.className = 'ospite-box';
@@ -104,24 +92,17 @@
         }
     }
 
+    // Avvia la prima generazione
     generaCampiOspiti();
 
-    const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        // Estrae solo la stringa base64 pura escludendo il data:image/png;base64,
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
-    });
-
-    document.getElementById('checkinForm').addEventListener('submit', async function(e) {
+    document.getElementById('checkinForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const btn = document.getElementById('btnInvia');
-        btn.innerText = "Caricamento immagini e dati in corso...";
+        btn.innerText = "Invio in corso...";
         btn.disabled = true;
 
-        // 1. Costruisci la stringa degli ospiti correttamente
+        // Estrae i dati dagli ospiti dinamici
         const nomi = document.querySelectorAll('.nome_ospite');
         const documenti = document.querySelectorAll('.doc_ospite');
         let ospitiTesto = "";
@@ -129,53 +110,39 @@
             ospitiTesto += `[Ospite ${index+1}: ${el.value} - Doc: ${documenti[index].value}] `;
         });
 
-        // 2. Prepara l'oggetto JSON da inviare (Google Apps Script lavora meglio con JSON testuali in POST)
+        // Crea il payload dei dati pulito
         const datiPayload = {
             camera: document.getElementById('camera').value,
             checkin: document.getElementById('checkin').value,
             checkout: document.getElementById('checkout').value,
             referente: document.getElementById('referente').value,
             telefono: document.getElementById('telefono').value,
-            ospiti_dati: ospitiTesto,
-            file_fronte: "",
-            file_fronte_name: "",
-            file_retro: "",
-            file_retro_name: ""
+            ospiti_dati: ospitiTesto
         };
 
-        // 3. Converti i file in Base64 se presenti
-        const fileFronteInput = document.getElementById('foto_fronte');
-        const fileRetroInput = document.getElementById('foto_retro');
+        // Incolla qui l'URL aggiornato del tuo deployment di Google Apps Script
+        const urlScript = 'https://google.com';
 
-        if (fileFronteInput.files.length > 0) {
-            const fileFronte = fileFronteInput.files[0];
-            datiPayload.file_fronte = await toBase64(fileFronte);
-            datiPayload.file_fronte_name = fileFronte.name;
-        }
-        if (fileRetroInput.files.length > 0) {
-            const fileRetro = fileRetroInput.files[0];
-            datiPayload.file_retro = await toBase64(fileRetro);
-            datiPayload.file_retro_name = fileRetro.name;
-        }
-
-        const urlScript = 'https://script.google.com/macros/s/AKfycbyKhgzLU044o1-K4JWKM1xmyxrMNjusESeXZJXbMqBLxqJwoGLJYDvJsvRIw1Q5iq-v/exec';
-
-        // 4. Invia i dati come stringa JSON (Risolve il problema del cors e della perdita dati)
         fetch(urlScript, {
             method: 'POST',
-            mode: 'cors', 
+            mode: 'cors',
             headers: {
-                'Content-Type': 'text/plain;charset=utf-8', // Usiamo text/plain per evitare i pre-flight delle restrizioni CORS di Google
+                'Content-Type': 'text/plain;charset=utf-8'
             },
             body: JSON.stringify(datiPayload)
         })
-        .then(response => {
-            alert('Grazie! Il tuo check-in e le foto dei documenti sono stati registrati correttamente.');
-            document.getElementById('checkinForm').reset();
-            generaCampiOspiti();
+        .then(response => response.json())
+        .then(res => {
+            if(res.status === "success") {
+                alert('Grazie! Il tuo check-in è stato registrato correttamente ed è stata inviata una notifica via email.');
+                document.getElementById('checkinForm').reset();
+                generaCampiOspiti();
+            } else {
+                alert('Errore dal server: ' + res.message);
+            }
         })
         .catch(error => {
-            alert('Si è verificato un errore durante il caricamento dei file. Riprova.');
+            alert('Si è verificato un errore di connessione. Riprova.');
             console.error(error);
         })
         .finally(() => {
