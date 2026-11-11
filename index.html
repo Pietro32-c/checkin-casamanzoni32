@@ -209,3 +209,44 @@
             file_retro: "",
             file_retro_name: ""
         };
+        const fileFronteInput = document.getElementById('foto_fronte');
+const fileRetroInput = document.getElementById('foto_retro');
+// Se i file sono presenti, li converte in Base64
+if (fileFronteInput.files.length > 0) {
+datiPayload.file_fronte = await toBase64(fileFronteInput.files[0]);
+datiPayload.file_fronte_name = fileFronteInput.files[0].name;
+}
+if (fileRetroInput.files.length > 0) {
+datiPayload.file_retro = await toBase64(fileRetroInput.files[0]);
+datiPayload.file_retro_name = fileRetroInput.files[0].name;
+}
+// Mantieni il tuo URL funzionante
+const urlScript = 'https://script.google.com/macros/s/AKfycbyqm0qZ41B1UDqlWm3TNtNOwLOeneXe4NhxzCQEmdD0x55kxRv5Aw1aQzvb6TDzsA/exec';
+fetch(urlScript, {
+method: 'POST',
+mode: 'cors',
+headers: {
+'Content-Type': 'text/plain;charset=utf-8'
+},
+body: JSON.stringify(datiPayload)
+})
+.then(response => response.json())
+.then(res => {
+if(res.status === "success") {
+alert('Grazie! Il tuo check-in e i documenti sono stati registrati e inviati correttamente.');
+window.location.reload(); // Ricarica la pagina per azzerare l'interfaccia grafica dei file
+} else {
+alert('Errore dal server: ' + res.message);
+}
+})
+.catch(error => {
+alert('Si è verificato un errore di rete. Riprova.');
+console.error(error);
+})
+.finally(() => {
+btn.innerText = "Invia Check-in Online";
+btn.disabled = false;
+});
+});
+
+        
