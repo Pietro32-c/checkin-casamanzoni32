@@ -61,7 +61,6 @@
 
         <div id="containerOspiti"></div>
 
-        <!-- Sezione Caricamento File Visibile -->
         <div class="file-group">
             <h3>Foto Documento Referente</h3>
             <label for="foto_fronte">Foto Fronte (JPG/PNG) *</label>
@@ -70,8 +69,6 @@
             <label for="foto_retro">Foto Retro (JPG/PNG) *</label>
             <input type="file" id="foto_retro" accept="image/*" required>
         </div>
-
-        <input type="hidden" id="ospiti_dati" name="ospiti_dati">
 
         <div class="privacy">
             <strong>Informativa Privacy:</strong> I dati e le immagini raccolti sono trattati esclusivamente per gli obblighi di comunicazione alle autorità di pubblica sicurezza (Alloggiati Web).
@@ -92,6 +89,7 @@
         const container = document.getElementById('containerOspiti');
         container.innerHTML = '';
 
+        // Partiamo da i=2 se la prima persona è il referente, oppure lasciamoli tutti se preferisci elencarli esplicitamente
         for (let i = 1; i <= num; i++) {
             const div = document.createElement('div');
             div.className = 'ospite-box';
@@ -106,13 +104,13 @@
         }
     }
 
-    // Esegui la prima generazione all'avvio
     generaCampiOspiti();
 
     const toBase64 = file => new Promise((resolve, reject) => {
         const reader = new FileReader();
+        // Estrae solo la stringa base64 pura escludendo il data:image/png;base64,
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.onerror = error => reject(error);
     });
 
@@ -123,42 +121,55 @@
         btn.innerText = "Caricamento immagini e dati in corso...";
         btn.disabled = true;
 
+        // 1. Costruisci la stringa degli ospiti correttamente
         const nomi = document.querySelectorAll('.nome_ospite');
         const documenti = document.querySelectorAll('.doc_ospite');
         let ospitiTesto = "";
-        
         nomi.forEach((el, index) => {
             ospitiTesto += `[Ospite ${index+1}: ${el.value} - Doc: ${documenti[index].value}] `;
         });
-        
-        document.getElementById('ospiti_dati').value = ospitiTesto;
 
+        // 2. Prepara l'oggetto JSON da inviare (Google Apps Script lavora meglio con JSON testuali in POST)
+        const datiPayload = {
+            camera: document.getElementById('camera').value,
+            checkin: document.getElementById('checkin').value,
+            checkout: document.getElementById('checkout').value,
+            referente: document.getElementById('referente').value,
+            telefono: document.getElementById('telefono').value,
+            ospiti_dati: ospitiTesto,
+            file_fronte: "",
+            file_fronte_name: "",
+            file_retro: "",
+            file_retro_name: ""
+        };
+
+        // 3. Converti i file in Base64 se presenti
         const fileFronteInput = document.getElementById('foto_fronte');
         const fileRetroInput = document.getElementById('foto_retro');
-        
-        const formData = new FormData(this);
 
         if (fileFronteInput.files.length > 0) {
             const fileFronte = fileFronteInput.files[0];
-            const base64Fronte = await toBase64(fileFronte);
-            formData.append('file_fronte', base64Fronte);
-            formData.append('file_fronte_name', fileFronte.name);
+            datiPayload.file_fronte = await toBase64(fileFronte);
+            datiPayload.file_fronte_name = fileFronte.name;
         }
         if (fileRetroInput.files.length > 0) {
             const fileRetro = fileRetroInput.files[0];
-            const base64Retro = await toBase64(fileRetro);
-            formData.append('file_retro', base64Retro);
-            formData.append('file_retro_name', fileRetro.name);
+            datiPayload.file_retro = await toBase64(fileRetro);
+            datiPayload.file_retro_name = fileRetro.name;
         }
 
         const urlScript = 'https://script.google.com/macros/s/AKfycbxpCXcc7Kl0Y1c7lnmO4iJUv5sRhfsAnlmkHd_AseU39swNGZk5dP7AbI3S2M7ch258/exec';
 
+        // 4. Invia i dati come stringa JSON (Risolve il problema del cors e della perdita dati)
         fetch(urlScript, {
             method: 'POST',
-            mode: 'no-cors',
-            body: formData
+            mode: 'cors', 
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8', // Usiamo text/plain per evitare i pre-flight delle restrizioni CORS di Google
+            },
+            body: JSON.stringify(datiPayload)
         })
-        .then(() => {
+        .then(response => {
             alert('Grazie! Il tuo check-in e le foto dei documenti sono stati registrati correttamente.');
             document.getElementById('checkinForm').reset();
             generaCampiOspiti();
